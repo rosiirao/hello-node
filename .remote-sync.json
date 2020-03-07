@@ -1,0 +1,19 @@
+{
+  "transport": "scp",
+  "uploadOnSave": true,
+  "useAtomicWrites": true,
+  "deleteLocal": false,
+  "hostname": "localhost",
+  "port": "22",
+  "target": "/local/data2/test-server",
+  "ignore": [
+    ".remote-sync.json",
+    ".git/**",
+    "node_modules/**",
+    "dist/**"
+  ],
+  "watch": [],
+  "username": "notes",
+  "keyfile": "C:/Users/Yu/.ssh/9394_rsa.ppk",
+  "passphrase": "rosii5566"
+}
