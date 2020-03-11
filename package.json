@@ -15,7 +15,10 @@
   "author": "yu",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.15.4",
+    "compression": "^1.7.4",
+    "express": "^4.17.1",
+    "http-proxy-middleware": "^1.0.1",
+    "minimatch": "^3.0.4",
     "spdy": "^3.4.7"
   }
 }

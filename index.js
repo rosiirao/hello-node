@@ -1,7 +1,14 @@
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 8080
-const HOSTNAME = 'localhost'
+const PORT = process.env.PORT || 8080;
+const HOSTNAME = 'localhost';
+
+const compression = require('compression');
+const {makeRe} = require('minimatch');
+
+const proxyMiddleware = require('http-proxy-middleware');
+const proxyPath = makeRe(`\/dist{\/authenticate,\/rest\/**,\/api\/**}`);
+
 /*
 app.use(function(req, res){
 	res.type('text/plain');
@@ -15,6 +22,16 @@ app.use(function(err,req,res,next){
 	res.send('500 - Server Error');
 });
 */
+
+app.use(compression());
+
+app.use(proxyPath, proxyMiddleware({
+  target: 'http://localhost:8081/',
+  changeOrigin: true,
+  pathRewrite: {
+    [`^\/dist\/`]: '/'
+  }
+}));
 
 app.use(express.static('./', {
   setHeaders:  function(res, path, stat){
