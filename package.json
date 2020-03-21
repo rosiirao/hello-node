@@ -1,13 +1,17 @@
 {
   "name": "dev-server",
   "version": "1.0.0",
+  "repository": "rosiirao/hello-node",
+  "homepage": "https://github.com/rosiirao/hello-node",
   "description": "for develop front-end project",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "start-http2": "node --expose-http2 index.js"
+    "start-http2": "node --experimental-modules index-http2.js",
+    "watch-http2": "nodemon --experimental-modules index-http2.js"
   },
+  "type": "module",
   "keywords": [
     "dev",
     "front-end"
@@ -18,7 +22,19 @@
     "compression": "^1.7.4",
     "express": "^4.17.1",
     "http-proxy-middleware": "^1.0.1",
-    "minimatch": "^3.0.4",
-    "spdy": "^3.4.7"
+    "koa": "^2.11.0",
+    "koa-better-serve": "^2.0.7",
+    "koa-conditional-get": "^2.0.0",
+    "koa-convert": "^1.2.0",
+    "koa-etag": "^3.0.0",
+    "koa-files": "^1.0.0",
+    "koa-route": "^3.2.0",
+    "minimatch": "^3.0.4"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "eslint": "^6.8.0",
+    "nodemon": "^2.0.2",
+    "prettier": "^2.0.2"
   }
 }

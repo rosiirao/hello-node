@@ -1,8 +1,8 @@
 'use strict'
 
-const fs = require('fs')
-const path = require('path')
-const mime = require('mime')
+import fs from 'fs';
+import path from 'path';
+import mime from 'mime';
 
 function getFiles (baseDir) {
   const files = new Map()
@@ -26,6 +26,5 @@ function getFiles (baseDir) {
   return files
 }
 
-module.exports = {
-  getFiles
-}
+
+export { getFiles };
