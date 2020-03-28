@@ -1,6 +1,9 @@
 {
-    "name": "",
-    "short_name": "",
+    "name": "hello node",
+    "short_name": "hello node",
+    "description": "a startup node app!",
+    ​​"orientation": "landscape",
+    "start_url": "/index.html",
     "icons": [
         {
             "src": "icon/android-chrome-192x192.png",

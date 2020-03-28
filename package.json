@@ -21,7 +21,7 @@
   "dependencies": {
     "compression": "^1.7.4",
     "express": "^4.17.1",
-    "http-proxy-middleware": "^1.0.1",
+    "http-proxy-middleware": "^1.0.3",
     "koa": "^2.11.0",
     "koa-better-serve": "^2.0.7",
     "koa-conditional-get": "^2.0.0",

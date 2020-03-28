@@ -19,6 +19,16 @@ import serve from 'koa-files';
 
 const app = new Koa();
 
+app.on('error', (err, ctx)=>{
+  /* centralized error handling:
+   *   console.log error
+   *   write error to log file
+   *   save error and request information to database if ctx.request match condition
+   *   ...
+   */
+  console.error(ctx.path, err);
+});
+
 app.use(
   serve(`${__dirname}/public`, {
     maxAge: 100,

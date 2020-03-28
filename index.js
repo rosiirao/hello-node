@@ -33,7 +33,7 @@ app.use(proxyPath, httpProxyMiddleware.createProxyMiddleware ({
   target: 'http://localhost:8081/',
   changeOrigin: true,
   pathRewrite: {
-    [`^/disy/`]: '/'
+    [`^/dist/`]: '/'
   }
 }));
 
@@ -52,3 +52,4 @@ https.createServer({
 You can open the URL in the browser.`)
   }
 );
+
