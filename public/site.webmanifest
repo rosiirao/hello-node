@@ -4,8 +4,7 @@
     "description": "a startup node app!",
     ​​"orientation": "landscape",
     "start_url": "/index.html",
-    "icons": [
-        {
+    "icons": [{
             "src": "icon/android-chrome-192x192.png",
             "sizes": "192x192",
             "type": "image/png"

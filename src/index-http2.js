@@ -19,7 +19,7 @@ import serve from 'koa-files';
 
 const app = new Koa();
 
-app.on('error', (err, ctx)=>{
+app.on('error', (err, ctx) => {
   /* centralized error handling:
    *   console.log error
    *   write error to log file
@@ -57,6 +57,26 @@ You can open the URL in the browser.`);
 
 process.title = 'hello-node';
 
+process.stdin.on('data', function(data) {
+  data = data.toString().trim();
+  if(data.toLowerCase() === 'quit'){
+    console.log('starting to quit server');
+    server.close(()=>{
+      server.unref();
+      console.log('server closed completed');
+    });
+  }
+});
+
+process.stdin.resume();
+
+process.on('SIGINT', () => {
+  console.log('Received SIGINT. Press Control-D to exit.');
+  server.close(()=>{
+    server.unref();
+    console.log('server closed completed');
+  });
+});
 // app.get('/pushy', (req, res) => {
 //   // var stream = res.push('./hello.js', {
 //   //   status: 200, // optional
