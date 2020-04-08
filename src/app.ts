@@ -5,9 +5,6 @@ import fs from 'fs';
 import path from 'path';
 // import { HTTP2_HEADER_PATH } = require('http2').constants
 
-const PORT = process.env.PORT || 8080;
-const HOSTNAME = 'dev.notacup.com';
-
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,39 +41,14 @@ app.use(async (ctx, next) => {
 
 const server = http2.createSecureServer(
   {
-    cert: fs.readFileSync('./ssl/dev.crt'),
-    key: fs.readFileSync('./ssl/dev.key'),
+    cert: fs.readFileSync('./.ssl/dev.crt'),
+    key: fs.readFileSync('./.ssl/dev.key'),
   },
   app.callback()
 );
 
-server.listen(PORT, HOSTNAME, () => {
-  console.log(`Server is listening on https://${HOSTNAME}:${PORT}.
-You can open the URL in the browser.`);
-});
+export default server;
 
-process.title = 'hello-node';
-
-process.stdin.on('data', function(data) {
-  data = data.toString().trim();
-  if(data.toLowerCase() === 'quit'){
-    console.log('starting to quit server');
-    server.close(()=>{
-      server.unref();
-      console.log('server closed completed');
-    });
-  }
-});
-
-process.stdin.resume();
-
-process.on('SIGINT', () => {
-  console.log('Received SIGINT. Press Control-D to exit.');
-  server.close(()=>{
-    server.unref();
-    console.log('server closed completed');
-  });
-});
 // app.get('/pushy', (req, res) => {
 //   // var stream = res.push('./hello.js', {
 //   //   status: 200, // optional

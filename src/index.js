@@ -9,8 +9,6 @@ import https from 'https';
 import fs from 'fs';
 
 const app = express();
-const PORT = process.env.PORT || 8080;
-const HOSTNAME = 'dev.notacup.com';
 
 /*
 app.use(function(req, res){
@@ -45,10 +43,8 @@ app.use(express.static('./public', {
 }));
 
 https.createServer({
-  key: fs.readFileSync('ssl/dev.key'),
-  cert: fs.readFileSync('ssl/dev.crt')
-}, app).listen(PORT, HOSTNAME, ()=>{
-    console.log(`Server is listening on https://${HOSTNAME}:${PORT}.
-You can open the URL in the browser.`)
-  }
-);
+  key: fs.readFileSync('.ssl/dev.key'),
+  cert: fs.readFileSync('.ssl/dev.crt')
+}, app);
+
+export default https;

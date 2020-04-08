@@ -1,135 +1,91 @@
-import http2 from 'http2';
-import Koa from 'koa';
-// import route from 'koa-route';
-import fs from 'fs';
-import path from 'path';
-// import { HTTP2_HEADER_PATH } = require('http2').constants
+import cluster from 'cluster';
+import os from 'os';
+import app from './app.js';
+import dotenv from 'dotenv';
 
-const PORT = process.env.PORT || 8080;
-const HOSTNAME = 'dev.notacup.com';
+dotenv.config();
 
-import { fileURLToPath } from 'url';
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const numCPUs = os.cpus().length;
+const numWorkers = Math.floor(numCPUs/2) || 1; 
 
-// import * as helper  from './helper.js';
-// const PUBLIC_PATH = path.join(__dirname, '../');
-// const publicFiles = helper.getFiles(PUBLIC_PATH);
+const PORT = process.env.HTTP2_PORT || 8080;
+const HOSTNAME = process.env.HTTP2_HOST || 'localhost';
 
-import serve from 'koa-files';
+enum TER_MSG {
+  quit = 'quit',
+}
 
-const app = new Koa();
-
-app.on('error', (err, ctx) => {
-  /* centralized error handling:
-   *   console.log error
-   *   write error to log file
-   *   save error and request information to database if ctx.request match condition
-   *   ...
-   */
-  console.error(ctx.path, err);
-});
-
-app.use(
-  serve(`${__dirname}/public`, {
-    maxAge: 100,
-  })
-);
-
-app.use(async (ctx, next) => {
-  if (/(\.js|\.json)$/.test(ctx.request.path)) {
-    ctx.set('cache-control', 'public, max-age=1000');
+if(cluster.isMaster) {
+  console.log(`Master ${process.pid} is running`);
+  
+  for(let i = 0; i< numWorkers; i++){
+    cluster.fork();
   }
-  await next();
-});
 
-const server = http2.createSecureServer(
-  {
-    cert: fs.readFileSync('./ssl/dev.crt'),
-    key: fs.readFileSync('./ssl/dev.key'),
-  },
-  app.callback()
-);
-
-server.listen({
-  port: PORT, host: HOSTNAME
-}, () => {
-  console.log(`Server is listening on https://${HOSTNAME}:${PORT}.
-You can open the URL in the browser.`);
-});
-
-process.title = 'hello-node';
-
-process.stdin.on('data', function(data) {
-  let cmd = data.toString().trim();
-  if(cmd.toLowerCase() === 'quit'){
-    console.log('starting to quit server');
-    server.close(()=>{
-      server.unref();
-      console.log('server closed completed');
-    });
-  }
-});
-
-process.stdin.resume();
-
-process.on('SIGINT', () => {
-  console.log('Received SIGINT. Press Control-D to exit.');
-  server.close(()=>{
-    server.unref();
-    console.log('server closed completed');
+  cluster.on('exit', (worker, code, signal) => {
+    console.log(`worker ${worker.process.pid} died`);
+    if(Object.entries(cluster.workers).length === 0){
+      process.nextTick(()=>process.exit())
+    }
   });
-});
-// app.get('/pushy', (req, res) => {
-//   // var stream = res.push('./hello.js', {
-//   //   status: 200, // optional
-//   //   method: 'GET', // optional
-//   //   request: {
-//   //     accept: '*/*'
-//   //   },
-//   //   response: {
-//   //     'content-type': 'application/javascript'
-//   //   }
-//   //
-//   // })
-//   // stream.on('error', function() {
-//   //   console.log(arguments);
-//   // })
-//   // stream.end('alert("hello from push stream!");')
+  process.title = 'hello-node-master';
 
-//   if (res.push) {
+  process.stdin.on('data', function(data) {
+    let cmd = data.toString().trim().toLowerCase();
+    if(cmd in TER_MSG){
+      console.log('starting to quit server');
+      Object.values(cluster.workers).forEach(
+        worker => {
+          worker.send(cmd);
+          worker.disconnect();
+        }
+      );
+      cluster.on('disconnect', (worker)=>{
+        console.log(`worker ${worker.process.pid} disconnected`);
+      })
+    }
+  });
 
-//       // Push JavaScript asset (main.js) to the client
-//       var stream = res.push('/hello.js', {
-//           req: {'accept': '**/*'},
-//           res: {'content-type': 'application/javascript'}
-//       });
+  process.stdin.resume();
+  process.on('SIGINT', () => {
+    console.log('Master Received SIGINT.  Press Control-D to exit.');
+  });
+} else {
 
-//       stream.on('error', function(err) {
-//           console.error(err);
-//       });
-//       stream.end('alert("hello from push stream!");');
-//   }
-//   //res.send('hello pushy');
-//   res.end('<script src="/test-server/hello.js"></script>')
-// });
+  app.listen({
+    port: PORT, host: HOSTNAME
+  }, () => {
+    console.log(`Server is listening on https://${HOSTNAME}:${PORT}.
+  You can open the URL in the browser.`);
+  });
 
-// app.get('/', function (req, res) {
-// //  res.send('hello, http2!');
-//   res.send('<!Doctype html><html><head><script src="./test-server/hello.js" /></head><body>hello</body></html>')
-//   push(res.stream, '/hello.js');
-//   res.end('');
-// })
-//
-// function push (stream, filePath) {
-//   const { file, headers } = publicFiles.get(filePath)
-//   const pushHeaders = { [HTTP2_HEADER_PATH]: filePath }
-//
-//   // File not found
-//   if (!file) {
-//     return ;
-//   }
-//
-//   stream.pushStream(pushHeaders, (pushStream) => {
-//     pushStream.respondWithFD(file, headers)
-//   })
-// }
+  process.title = 'hello-node-worker';
+
+  process.on('message', m => {
+    switch(m){
+      case TER_MSG.quit:{
+        app.close(()=>{
+          app.unref();
+          console.log(`worker ${process.pid} server closed completed`);
+          process.exit();
+        });
+        break;
+      }
+      default:{
+        console.warn(`unknown command ${m}`);
+      }
+    }
+  });
+
+  // process.on('SIGINT', () => {
+  //   console.log('Worker Received SIGINT. ');
+  //   app.close(()=>{
+  //     app.unref();
+  //     console.log('server closed completed');
+  //   });
+  // });
+}
+
+// setTimeout(()=>{
+//   cluster.
+// }, 30000);
