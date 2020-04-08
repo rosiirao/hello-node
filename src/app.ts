@@ -26,8 +26,9 @@ app.on('error', (err, ctx) => {
   console.error(ctx.path, err);
 });
 
+console.log(`${__dirname}`);
 app.use(
-  serve(`${__dirname}/public`, {
+  serve(path.join(__dirname, `../public`), {
     maxAge: 100,
   })
 );
@@ -41,8 +42,8 @@ app.use(async (ctx, next) => {
 
 const server = http2.createSecureServer(
   {
-    cert: fs.readFileSync('./.ssl/dev.crt'),
-    key: fs.readFileSync('./.ssl/dev.key'),
+    cert: fs.readFileSync('.ssl/dev.crt'),
+    key: fs.readFileSync('.ssl/dev.key'),
   },
   app.callback()
 );
