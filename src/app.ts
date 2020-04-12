@@ -1,4 +1,5 @@
 import http2 from 'http2';
+import http from 'http';
 import Koa from 'koa';
 // import route from 'koa-route';
 import fs from 'fs';
@@ -8,11 +9,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+import router from './routes/index.js';
+
 // import * as helper  from './helper.js';
 // const PUBLIC_PATH = path.join(__dirname, '../');
 // const publicFiles = helper.getFiles(PUBLIC_PATH);
 
 import serve from 'koa-files';
+
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = new Koa();
 
@@ -26,12 +33,13 @@ app.on('error', (err, ctx) => {
   console.error(ctx.path, err);
 });
 
-console.log(`${__dirname}`);
 app.use(
   serve(path.join(__dirname, `../public`), {
     maxAge: 100,
   })
 );
+
+app.use(router.routes()).use(router.allowedMethods());
 
 app.use(async (ctx, next) => {
   if (/(\.js|\.json)$/.test(ctx.request.path)) {
@@ -40,13 +48,21 @@ app.use(async (ctx, next) => {
   await next();
 });
 
-const server = http2.createSecureServer(
-  {
-    cert: fs.readFileSync('.ssl/dev.crt'),
-    key: fs.readFileSync('.ssl/dev.key'),
-  },
-  app.callback()
-);
+const http2Enabled = process.env.HTTP2_SERVER !== 'disable';
+const options = http2Enabled
+  ? {
+      cert: fs.readFileSync(process.env.cert_file),
+      key: fs.readFileSync(process.env.key_file),
+    }
+  : {};
+
+;
+const server = http2Enabled
+  ? http2.createSecureServer(
+      options,
+      app.callback()
+    )
+  : http.createServer(app.callback());
 
 export default server;
 

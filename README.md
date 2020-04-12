@@ -14,6 +14,9 @@ place ssl cert file in _.ssl_ folder to start up server.
 .env
 
 ```
-HTTP2_HOST=localhst
-HTTP2_PORT=3443
+HTTP2_SERVER=disable
+HTTP2_HOST=localhost
+HTTP2_PORT=8443
+HTTP_HOST=localhost
+HTTP_PORT=8081
 ```
