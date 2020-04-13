@@ -1,7 +1,6 @@
 import cluster from 'cluster';
 import os from 'os';
 import app from './app.js';
-import server from 'koa-files';
 
 import fs from 'fs';
 
@@ -76,32 +75,34 @@ if(cluster.isMaster) {
     console.log('Master Received SIGINT.  Press Control-D to exit.');
   });
 } else {
-  app.on('request', ()=>{
-    process.send({
-      type: 'log',
-      content: `[${Date()}] response worker id ${process.pid}\n`
+  app.then(server=>{
+    server.on('request', ()=>{
+      process.send({
+        type: 'log',
+        content: `[${Date()}] response worker id ${process.pid}\n`
+      });
     });
-  });
-
-  app.listen({
-    port: PORT, host: HOSTNAME
-  });
-
-  process.on('message', m => {
-    switch(m){
-      case TER_MSG.quit:{
-        app.close(()=>{
-          app.unref();
-          console.log(`worker ${process.pid} server closed completed`);
-          process.exit();
-        });
-        break;
+  
+    server.listen({
+      port: PORT, host: HOSTNAME
+    });
+  
+    process.on('message', m => {
+      switch(m){
+        case TER_MSG.quit:{
+          server.close(()=>{
+            server.unref();
+            console.log(`worker ${process.pid} server closed completed`);
+            process.exit();
+          });
+          break;
+        }
+        default:{
+          console.warn(`unknown command ${m}`);
+        }
       }
-      default:{
-        console.warn(`unknown command ${m}`);
-      }
-    }
-  });
+    });
+  })
 
   // process.on('SIGINT', () => {
   //   console.log('Worker Received SIGINT. ');

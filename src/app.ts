@@ -1,5 +1,3 @@
-import http2 from 'http2';
-import http from 'http';
 import Koa from 'koa';
 // import route from 'koa-route';
 import fs from 'fs';
@@ -57,12 +55,17 @@ const options = http2Enabled
   : {};
 
 ;
-const server = http2Enabled
-  ? http2.createSecureServer(
+
+const httpModule = import(http2Enabled?'http2':'http');
+
+const server = httpModule.then(http_ => http2Enabled
+    ?http_.createSecureServer(
       options,
       app.callback()
     )
-  : http.createServer(app.callback());
+    :http_.createServer(app.callback())
+);
+
 
 export default server;
 
