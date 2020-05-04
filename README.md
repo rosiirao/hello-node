@@ -10,7 +10,7 @@ hello typescript
 
 ## configuration
 
-.env
+### .env
 
 ```
 HTTP2_SERVER=disable
@@ -21,3 +21,7 @@ HTTP_PORT=8081
 cert_file=cert_file_path
 key_file=key_file_path
 ```
+
+### config.json
+
+connect: OAuth2 connect configuration

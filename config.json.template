@@ -1,0 +1,22 @@
+{
+    "connect": {
+        "defaults": {
+            "origin": "https://dev.notacup.com:8443",
+            "transport": "session",
+            "state": true
+        },
+        "google": {
+            "key": "APP_ID",
+            "secret": "APP_SECRET",
+            "callback": "/hello",
+            "scope": [
+                "openid"
+            ]
+        },
+        "twitter": {
+            "key": "CONSUMER_KEY",
+            "secret": "CONSUMER_SECRET",
+            "callback": "/hi"
+        }
+    }
+}

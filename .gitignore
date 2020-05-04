@@ -116,3 +116,6 @@ dist
 
 # ssl cert
 .ssl
+
+# configuration file
+config.json
