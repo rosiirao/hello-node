@@ -1,7 +1,7 @@
 {
     "connect": {
         "defaults": {
-            "origin": "https://dev.notacup.com:8443",
+            "origin": "https://example.com",
             "transport": "session",
             "state": true
         },

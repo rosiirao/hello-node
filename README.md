@@ -24,4 +24,6 @@ key_file=key_file_path
 
 ### config.json
 
-connect: OAuth2 connect configuration
+copy config.json.template to config directory.
+
+`{ connect: 'OAuth2 connect configuration' }`
