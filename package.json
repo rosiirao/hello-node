@@ -52,6 +52,8 @@
     "@types/koa-session": "^5.10.2",
     "@types/koa__router": "^8.0.2",
     "@types/shelljs": "^0.8.7",
+    "@typescript-eslint/eslint-plugin": "^2.31.0",
+    "@typescript-eslint/parser": "^2.31.0",
     "babel-eslint": "^10.1.0",
     "concurrently": "^5.2.0",
     "eslint": "^6.8.0",
