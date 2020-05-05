@@ -13,7 +13,7 @@ const HOSTNAME = http2Enabled?process.env.HTTP2_HOST:process.env.HTTP_HOST || 'l
 const http_protocol = http2Enabled?'https':'http';
 
 enum TER_MSG {
-  quit = 'quit',
+  QUIT = 'quit',
 }
 
 if(cluster.isMaster) {
@@ -49,7 +49,7 @@ if(cluster.isMaster) {
     console.log(`worker ${worker.process.pid} disconnected`);
   })
 
-  cluster.on('exit', (worker, code, signal) => {
+  cluster.on('exit', () => {
     count --;
     if(count === 0){
       ws.end(`[${Date()}] server exit\n`);
@@ -89,7 +89,7 @@ if(cluster.isMaster) {
   
     process.on('message', m => {
       switch(m){
-        case TER_MSG.quit:{
+        case TER_MSG.QUIT:{
           server.close(()=>{
             server.unref();
             console.log(`worker ${process.pid} server closed completed`);

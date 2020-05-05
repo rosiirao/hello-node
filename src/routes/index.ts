@@ -6,9 +6,9 @@ const router = new Router({
 });
 
 router
-  .get('sysinfo', '/sysinfo', async (ctx, next) => {
+  .get('sysinfo', '/sysinfo', async () => {
   })
-  .get('sysinfor', '/sysinfo/runtime', async (ctx, next) => {
+  .get('sysinfor', '/sysinfo/runtime', async () => {
   })
   .get('/healthz', healthz)
   .get('/readyz', readyz)

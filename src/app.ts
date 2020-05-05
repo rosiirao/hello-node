@@ -46,7 +46,7 @@ app.use(async (ctx, next)=>{
     return ;
   }
   const grant_res =  ctx.session.grant && ctx.session.grant.response;
-  console.log(grant_res); 
+  console.log(grant_res);
   await next();
 
   if(ctx.status === 404) {
@@ -82,7 +82,7 @@ const options = http2Enabled
     }
   : {};
 
-;
+
 
 const httpModule = import(http2Enabled?'http2':'http');
 
