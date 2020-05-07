@@ -9,7 +9,7 @@ import * as auth from './etc/auth';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import router from './routes';
+import route from './routes';
 
 // import * as helper  from './helper.js';
 // const PUBLIC_PATH = path.join(__dirname, '../');
@@ -33,31 +33,26 @@ app.on('error', (err, ctx) => {
   console.error(ctx.path, err);
 });
 
-
 app.keys = auth.keys;
 
 /**
  * redirect to index.html
  */
-app.use(async (ctx, next)=>{
-  if(ctx.path === '/' || ctx.path === ''){
+app.use(async (ctx, next) => {
+  if (ctx.path === '/' || ctx.path === '') {
     ctx.status = 301;
     ctx.set('location', 'index.html');
-    return ;
+    return;
   }
-  const grant_res =  ctx.session.grant && ctx.session.grant.response;
-  console.log(grant_res);
   await next();
 
-  if(ctx.status === 404) {
+  if (ctx.status === 404) {
     ctx.set('content-type', 'text/html');
-    ctx.body = fs.readFileSync('./public/page_not_found.html')
+    ctx.body = fs.readFileSync('./public/page_not_found.html');
   }
 });
 
-app.use(auth.session(app))
-.use(auth.grant);
-
+app.use(auth.session(app)).use(auth.grant);
 
 app.use(
   serve(path.join(__dirname, `../public`), {
@@ -65,7 +60,7 @@ app.use(
   })
 );
 
-app.use(router.routes()).use(router.allowedMethods());
+app.use(route(app));
 
 app.use(async (ctx, next) => {
   if (/(\.js|\.json)$/.test(ctx.request.path)) {
@@ -82,18 +77,13 @@ const options = http2Enabled
     }
   : {};
 
+const httpModule = import(http2Enabled ? 'http2' : 'http');
 
-
-const httpModule = import(http2Enabled?'http2':'http');
-
-const server = httpModule.then(http_ => http2Enabled
-    ?http_.createSecureServer(
-      options,
-      app.callback()
-    )
-    :http_.createServer(app.callback())
+const server = httpModule.then((http_) =>
+  http2Enabled
+    ? http_.createSecureServer(options, app.callback())
+    : http_.createServer(app.callback())
 );
-
 
 export default server;
 
@@ -132,7 +122,7 @@ export default server;
 // });
 
 // app.get('/', function (req, res) {
-// //  res.send('hello, http2!');
+//   res.send('hello, http2!');
 //   res.send('<!Doctype html><html><head><script src="./test-server/hello.js" /></head><body>hello</body></html>')
 //   push(res.stream, '/hello.js');
 //   res.end('');

@@ -2,7 +2,7 @@ env:
   browser: true
   es6: true
   node: true
-extends: 'eslint:recommended'
+  jest: true
 globals:
   Atomics: readonly
   SharedArrayBuffer: readonly
@@ -12,6 +12,8 @@ parserOptions:
 parser: '@typescript-eslint/parser'
 plugins:
 - '@typescript-eslint'
+- 'jest'
 extends:
+- 'eslint:recommended'
 - 'plugin:@typescript-eslint/recommended'
 rules: {}
