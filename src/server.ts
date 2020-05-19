@@ -8,12 +8,12 @@ const numCPUs = os.cpus().length;
 const numWorkers = Math.floor(numCPUs / 2) || 1;
 
 const http2Enabled = process.env.HTTP2_SERVER !== 'disable';
-const PORT = http2Enabled
+const PORT = (http2Enabled
   ? process.env.HTTP2_PORT
-  : process.env.HTTP_PORT || 8080;
-const HOSTNAME = http2Enabled
+  : process.env.HTTP_PORT) || 8080;
+const HOSTNAME = (http2Enabled
   ? process.env.HTTP2_HOST
-  : process.env.HTTP_HOST || 'localhost';
+  : process.env.HTTP_HOST) || 'localhost';
 const httpProtocol = http2Enabled ? 'https' : 'http';
 
 enum TER_MSG {
