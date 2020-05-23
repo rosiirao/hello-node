@@ -19,14 +19,12 @@ router
   .get('/version', version);
 
 export default function (app: Koa): Koa.Middleware {
-  const route: Koa.Middleware = async function (_, next) {
-    app
-      .use(services.routes())
-      .use(services.allowedMethods())
-      .use(router.routes())
-      .use(router.allowedMethods());
-    await next();
-  };
+  app
+    .use(services.routes())
+    .use(services.allowedMethods())
+    .use(router.routes())
+    .use(router.allowedMethods());
+  const route: Koa.Middleware = (_, next) => next();
   return route;
 }
 // export default {
