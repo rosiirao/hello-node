@@ -46,7 +46,7 @@ export const readyz: Router.Middleware = async function readyz(ctx, next) {
   ctx.type = 'text/plain';
   console.log(`readyStatus ${readyStatus}!`);
   if (readyStatus) {
-    message = `Service is redy to new requests`;
+    message = `Service is ready to new requests`;
     available = 200;
   } else {
     message = `Service Temporary Unavailable`;
