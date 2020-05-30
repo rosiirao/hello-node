@@ -1,6 +1,6 @@
 import Koa from 'koa';
 import Router from '@koa/router';
-import { readyz, healthz, version } from '../controllers/kubeController.js';
+import { readyz, healthz, version } from '../controllers/kubeController';
 import services from './services';
 
 const router = new Router({

@@ -20,6 +20,7 @@ HTTP_HOST=localhost
 HTTP_PORT=8081
 cert_file=cert_file_path
 key_file=key_file_path
+PUBLIC_PATH=/YOUR_PROJECT_PATH/public
 ```
 
 ### config.json

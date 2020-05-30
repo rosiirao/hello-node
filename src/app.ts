@@ -1,13 +1,9 @@
 import Koa from 'koa';
 // import route from 'koa-route';
 import fs from 'fs';
-import path from 'path';
 // import { HTTP2_HEADER_PATH } = require('http2').constants
 
 import * as auth from './etc/auth';
-
-import { fileURLToPath } from 'url';
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import route from './routes';
 
@@ -54,8 +50,12 @@ app.use(async (ctx, next) => {
 
 app.use(auth.session(app)).use(auth.grant);
 
+// jest is not compatible with import.meta.url in the case ECMAScript Modules, use .env.PUBLIC_PATH variable instead.
+// import path from 'path';
+// import { fileURLToPath } from 'url';
+// const __dirname__ = path.dirname(fileURLToPath(import.meta.url));
 app.use(
-  serve(path.join(__dirname, `../public`), {
+  serve(process.env.PUBLIC_PATH, {
     maxAge: 100,
   })
 );
@@ -69,23 +69,7 @@ app.use(async (ctx, next) => {
   await next();
 });
 
-const http2Enabled = process.env.HTTP2_SERVER !== 'disable';
-const options = http2Enabled
-  ? {
-      cert: fs.readFileSync(process.env.cert_file),
-      key: fs.readFileSync(process.env.key_file),
-    }
-  : {};
-
-const httpModule = import(http2Enabled ? 'http2' : 'http');
-
-const server = httpModule.then((http_) =>
-  http2Enabled
-    ? http_.createSecureServer(options, app.callback())
-    : http_.createServer(app.callback())
-);
-
-export default server;
+export default app;
 
 // app.get('/pushy', (req, res) => {
 //   // var stream = res.push('./hello.js', {
