@@ -15,7 +15,8 @@ hello typescript
 ```
 HTTP2_SERVER=disable
 HTTP2_HOST=localhost
-HTTP2_PORT=8443
+HTTP2_PORT=3443
+HTTP2_ALLOW_HTTP1=enabled
 HTTP_HOST=localhost
 HTTP_PORT=8081
 cert_file=cert_file_path

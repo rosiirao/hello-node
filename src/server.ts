@@ -6,6 +6,7 @@ const options = http2Enabled
   ? {
       cert: fs.readFileSync(process.env.cert_file),
       key: fs.readFileSync(process.env.key_file),
+      allowHTTP1: process.env.HTTP2_ALLOW_HTTP1 === 'enabled',
     }
   : {};
 
