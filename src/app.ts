@@ -37,12 +37,13 @@ app.keys = auth.keys;
 app.use(async (ctx, next) => {
   if (ctx.path === '/' || ctx.path === '') {
     ctx.status = 301;
-    ctx.set('location', 'index.html');
+    ctx.set('location', `${ctx.origin}/index.html`);
     return;
   }
   await next();
 
   if (ctx.status === 404) {
+    ctx.status = 404;
     ctx.set('content-type', 'text/html');
     ctx.body = fs.readFileSync('./public/page_not_found.html');
   }
