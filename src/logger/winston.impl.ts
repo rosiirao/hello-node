@@ -8,6 +8,7 @@ import DailyRotateFile, {
   DailyRotateFileTransportOptions,
 } from 'winston-daily-rotate-file';
 import path from 'path';
+import logConf from './config';
 
 const { errors, printf, timestamp, combine } = winston.format;
 
@@ -82,7 +83,7 @@ const createFileTransport = function (
         ),
         level,
         maxSize: 4 << 20 /* bytes */,
-        maxFiles: process.env.LOG_MAX_FILES || '14d',
+        maxFiles: logConf?.LOG_MAX_FILES || '14d',
       },
       options,
       ignoreFormat && {

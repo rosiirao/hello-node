@@ -1,20 +1,19 @@
 import cluster from 'cluster';
 import os from 'os';
-import httpServer from './server';
+import httpServer, { startServer, serverSite } from './server';
 
 import { logger } from './logger';
 
-const numCPUs = os.cpus().length;
-const numWorkers = process.env.APP_PROCESSES || Math.floor(numCPUs / 2) || 1;
+import config from 'config';
+const conf: {
+  APP_WORKER_COUNT?: number;
+} = config.get('cluster');
 
-const http2Enabled = process.env.HTTP2_SERVER !== 'disable';
-const PORT = http2Enabled
-  ? process.env.HTTP2_PORT || 3443
-  : process.env.HTTP_PORT || 8080;
-const HOSTNAME =
-  (http2Enabled ? process.env.HTTP2_HOST : process.env.HTTP_HOST) ||
-  'localhost';
-const httpProtocol = http2Enabled ? 'https' : 'http';
+const numCPUs = os.cpus().length;
+const numWorkers = Math.max(
+  conf?.APP_WORKER_COUNT ?? Math.floor(numCPUs / 2),
+  1
+);
 
 enum TER_MSG {
   QUIT,
@@ -46,9 +45,7 @@ if (cluster.isMaster) {
       `worker ${count}/${numWorkers}\t : ${worker.process.pid} is listening`
     );
     if (count === numWorkers) {
-      logger.info(
-        `You can open ${httpProtocol}://${HOSTNAME}:${PORT} in the browser.`
-      );
+      logger.info(`You can open ${serverSite} in the browser.`);
     }
   });
   // cluster.on('')
@@ -63,10 +60,7 @@ if (cluster.isMaster) {
     if (count === 0) {
       cluster.removeAllListeners();
       logger.verbose(`server exit`);
-      console.log('server will exit;');
-
       process.nextTick(() => {
-        console.log('exit');
         process.exit();
       });
     }
@@ -95,10 +89,7 @@ if (cluster.isMaster) {
       });
     });
 
-    server.listen({
-      port: PORT,
-      host: HOSTNAME,
-    });
+    startServer(server);
 
     process.on('message', (m) => {
       switch (m) {

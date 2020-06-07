@@ -1,7 +1,8 @@
 import logger from './winston.impl';
 import Koa from 'koa';
+import logConf from './config';
 
-const accessLog = process.env.ACCESS_LOG === '1';
+const accessLog = logConf?.ACCESS_LOG;
 
 const appLogger = (app: Koa): Koa.Middleware => {
   app.on('error', (err, ctx) => {

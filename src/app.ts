@@ -15,7 +15,9 @@ import serve from 'koa-files';
 
 import dotenv from 'dotenv';
 
-dotenv.config();
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 const app = new Koa();
 
@@ -56,11 +58,11 @@ app.use(async (ctx, next) => {
 app.use(auth.session(app)).use(auth.grant);
 
 // jest is not compatible with import.meta.url in the case ECMAScript Modules, use .env.PUBLIC_PATH variable instead.
-// import path from 'path';
+import path from 'path';
 // import { fileURLToPath } from 'url';
 // const __dirname__ = path.dirname(fileURLToPath(import.meta.url));
 app.use(
-  serve(process.env.PUBLIC_PATH, {
+  serve(path.join('./public'), {
     maxAge: 100,
   })
 );
