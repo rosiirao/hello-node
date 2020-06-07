@@ -2,14 +2,15 @@ import cluster from 'cluster';
 import os from 'os';
 import httpServer from './server';
 
-import fs from 'fs';
+import { logger } from './logger';
 
 const numCPUs = os.cpus().length;
 const numWorkers = Math.floor(numCPUs / 2) || 1;
 
 const http2Enabled = process.env.HTTP2_SERVER !== 'disable';
-const PORT =
-  (http2Enabled ? process.env.HTTP2_PORT : process.env.HTTP_PORT) || 8080;
+const PORT = http2Enabled
+  ? process.env.HTTP2_PORT || 3443
+  : process.env.HTTP_PORT || 8080;
 const HOSTNAME =
   (http2Enabled ? process.env.HTTP2_HOST : process.env.HTTP_HOST) ||
   'localhost';
@@ -20,19 +21,18 @@ enum TER_MSG {
 }
 
 if (cluster.isMaster) {
-  const ws = fs.createWriteStream('./log/req.log');
-  ws.write(`[${Date()}] server start!\n`);
+  logger.verbose(`server start!\n`);
 
   process.title = 'hello-node-master';
 
-  console.log(`Master ${process.pid} is running\n`);
+  logger.info(`Master ${process.pid} is running\n`);
 
   for (let i = 0; i < numWorkers; i++) {
     const worker = cluster.fork();
 
     worker.on('message', (m) => {
       if (m.type === 'log') {
-        ws.write(m.content);
+        logger.verbose(m.content);
       }
     });
   }
@@ -40,11 +40,11 @@ if (cluster.isMaster) {
   let count = 0;
   cluster.on('listening', (worker) => {
     count++;
-    console.log(
+    logger.info(
       `worker ${count}/${numWorkers}\t : ${worker.process.pid} is listening`
     );
     if (count === numWorkers) {
-      console.log(
+      logger.info(
         `You can open ${httpProtocol}://${HOSTNAME}:${PORT} in the browser.`
       );
     }
@@ -52,13 +52,13 @@ if (cluster.isMaster) {
   // cluster.on('')
 
   cluster.on('disconnect', (worker) => {
-    console.log(`worker ${worker.process.pid} disconnected`);
+    logger.info(`worker ${worker.process.pid} disconnected`);
   });
 
   cluster.on('exit', () => {
     count--;
     if (count === 0) {
-      ws.end(`[${Date()}] server exit\n`);
+      logger.verbose(`server exit\n`);
       process.nextTick(() => process.exit());
     }
   });
@@ -75,14 +75,14 @@ if (cluster.isMaster) {
 
   process.stdin.resume();
   process.on('SIGINT', () => {
-    console.log('Master Received SIGINT.  Press Control-D to exit.');
+    logger.info('Master Received SIGINT.  Press Control-D to exit.');
   });
 } else {
   httpServer.then((server) => {
     server.on('request', () => {
       process.send({
         type: 'log',
-        content: `[${Date()}] response worker id ${process.pid}\n`,
+        content: `response worker id ${process.pid}\n`,
       });
     });
 
@@ -96,13 +96,13 @@ if (cluster.isMaster) {
         case TER_MSG.QUIT: {
           server.close(() => {
             server.unref();
-            console.log(`worker ${process.pid} server closed completed`);
+            logger.info(`worker ${process.pid} server closed completed`);
             process.exit();
           });
           break;
         }
         default: {
-          console.warn(`unknown supported command ${TER_MSG[m]}`);
+          logger.info(`unknown supported command ${TER_MSG[m]}`);
         }
       }
     });

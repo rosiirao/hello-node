@@ -19,6 +19,10 @@ dotenv.config();
 
 const app = new Koa();
 
+import logger from './logger';
+
+app.use(logger(app));
+
 app.on('error', (err, ctx) => {
   /* centralized error handling:
    *   console.log error
