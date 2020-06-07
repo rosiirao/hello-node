@@ -22,6 +22,9 @@ HTTP_PORT=8081
 cert_file=cert_file_path
 key_file=key_file_path
 PUBLIC_PATH=/YOUR_PROJECT_PATH/public
+APP_PROCESSES
+ACCESS_LOG=1
+LOG_MAX_FILES=14d
 ```
 
 ### config.json

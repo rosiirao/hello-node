@@ -49,7 +49,7 @@ app.use(async (ctx, next) => {
   if (ctx.status === 404) {
     ctx.status = 404;
     ctx.set('content-type', 'text/html');
-    ctx.body = fs.readFileSync('./public/page_not_found.html');
+    ctx.body = fs.promises.readFile('./public/page_not_found.html');
   }
 });
 
