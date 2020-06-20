@@ -1,4 +1,7 @@
 {
+    "application": {
+        "NAME": "koaTemplate"
+    },
     "cluster": {
         "APP_WORKER_COUNT": 2 
     },

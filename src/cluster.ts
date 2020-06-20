@@ -1,42 +1,35 @@
 import cluster from 'cluster';
-import os from 'os';
-import httpServer, { startServer, serverSite } from './server';
-
-import { logger } from './logger';
-
-import config from 'config';
-const conf: {
-  APP_WORKER_COUNT?: number;
-} = config.get('cluster');
-
-const numCPUs = os.cpus().length;
-const numWorkers = Math.max(
-  conf?.APP_WORKER_COUNT ?? Math.floor(numCPUs / 2),
-  1
-);
+import startServer, { serverSite } from './server';
+import {
+  createLogger,
+  addListener as addLoggerListener,
+  finishLogger,
+} from './logger';
 
 enum TER_MSG {
   QUIT,
 }
 
-if (cluster.isMaster) {
-  logger.verbose(`server start!`);
+const startMaster = (numWorkers: number): void => {
+  const logger = createLogger(true);
 
-  process.title = 'hello-node-master';
+  if (process.env.NODE_ENV !== 'production') {
+    logger.warn(`The server is not running in production environment!`);
+  }
+  if (numWorkers < 1) {
+    logger.warn(
+      'Wrong configuration of APP_WORKER_COUNT, the value is set to 1!'
+    );
+    numWorkers = 1;
+  }
 
-  logger.info(`Master ${process.pid} is running`, () => {
-    console.log('Master running log finished');
-  });
+  logger.info(`server start!`);
+  logger.info(`Master ${process.pid} is running`);
 
   for (let i = 0; i < numWorkers; i++) {
-    const worker = cluster.fork();
-
-    worker.on('message', (m) => {
-      if (m.type === 'log') {
-        logger.verbose(m.content);
-      }
-    });
+    cluster.fork();
   }
+  addLoggerListener(undefined, ...Object.values(cluster.workers));
 
   let count = 0;
   cluster.on('listening', (worker) => {
@@ -46,9 +39,10 @@ if (cluster.isMaster) {
     );
     if (count === numWorkers) {
       logger.info(`You can open ${serverSite} in the browser.`);
+      // add a prompt to wait user's command
+      process.stdout.write('> ');
     }
   });
-  // cluster.on('')
 
   cluster.on('disconnect', (worker) => {
     worker.removeAllListeners();
@@ -56,13 +50,10 @@ if (cluster.isMaster) {
   });
 
   cluster.on('exit', () => {
-    count--;
-    if (count === 0) {
+    if (Object.keys(cluster.workers).length === 0) {
       cluster.removeAllListeners();
-      logger.verbose(`server exit`);
-      process.nextTick(() => {
-        process.exit();
-      });
+      logger.info(`server exit!`);
+      exitProcess();
     }
   });
 
@@ -71,8 +62,10 @@ if (cluster.isMaster) {
     if (cmd in TER_MSG) {
       Object.values(cluster.workers).forEach((worker) => {
         worker.send(TER_MSG.QUIT);
-        worker.disconnect();
       });
+    } else {
+      // add a prompt to wait user's command
+      process.stdout.write('> ');
     }
   });
 
@@ -80,17 +73,12 @@ if (cluster.isMaster) {
   process.on('SIGINT', () => {
     logger.info('Master Received SIGINT.  Press Control-D to exit.');
   });
-} else {
-  httpServer.then((server) => {
-    server.on('request', () => {
-      process.send({
-        type: 'log',
-        content: `response worker id ${process.pid}`,
-      });
-    });
+};
 
-    startServer(server);
+const startWorker = () => {
+  const logger = createLogger(false);
 
+  startServer().then((server) => {
     process.on('message', (m) => {
       switch (m) {
         case TER_MSG.QUIT: {
@@ -99,7 +87,7 @@ if (cluster.isMaster) {
           server.close(() => {
             server.unref();
             logger.info(`worker ${process.pid} server closed completed`);
-            process.exit();
+            exitProcess();
           });
           break;
         }
@@ -109,12 +97,29 @@ if (cluster.isMaster) {
       }
     });
   });
+};
 
-  // process.on('SIGINT', () => {
-  //   console.log('Worker Received SIGINT. ');
-  //   app.close(()=>{
-  //     app.unref();
-  //     console.log('server closed completed');
-  //   });
-  // });
-}
+/**
+ *
+ * exitProcess wait finishLogger() and exit;
+ */
+const exitProcess = (): void => {
+  finishLogger()
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+};
+
+const startCluster = (numWorkers: number): void => {
+  if (cluster.isMaster) {
+    startMaster(numWorkers);
+  } else {
+    startWorker();
+  }
+};
+
+export default startCluster;

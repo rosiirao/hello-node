@@ -9,27 +9,48 @@ import DailyRotateFile, {
 } from 'winston-daily-rotate-file';
 import path from 'path';
 import logConf from './config';
+import cluster from 'cluster';
 
-const { errors, printf, timestamp, combine } = winston.format;
+const { errors, printf, combine } = winston.format;
+const errorsFormat = errors({ stack: true });
 
 type MyTransformFunction = <T extends winston.LogEntry>(
   info: T,
   opt?: DailyRotateFileTransportOptions
 ) => boolean | T;
 
-const printfLog = printf((info) => {
+/**
+ *
+ * timestampFormatter format timestamp
+ */
+const timestampFormatter = new Intl.DateTimeFormat(['en-US', 'zh-CN'], {
+  year: '2-digit',
+  month: 'numeric',
+  day: 'numeric',
+  hour12: false,
+  hour: 'numeric',
+  minute: 'numeric',
+  second: 'numeric',
+  timeZoneName: 'short',
+});
+
+/**
+ *
+ * plainFormat format info to plain text
+ */
+const plainFormat = printf((info) => {
   const {
     level,
-    pid,
+    pid = process.pid,
     message,
-    timestamp,
+    timestamp = timestampFormatter.format(new Date()),
     padding,
     stack,
     path,
     ...meta
   } = info;
   const paddingComputed = (padding && padding[level]) ?? ' ';
-  const printStack = [timestamp, pid, level];
+  const printStack = [pid, level];
   if (path !== undefined) {
     printStack.push(path);
   }
@@ -38,10 +59,11 @@ const printfLog = printf((info) => {
   } else {
     printStack.push(message);
   }
-  return `${[...printStack, ...Object.values(meta)].join(paddingComputed)}`;
+  return `[${timestamp}]${[
+    ...printStack,
+    ...Object.values(meta).map((d) => d ?? '_'),
+  ].join(paddingComputed)}`;
 });
-
-const logFormat = combine(errors({ stack: true }), timestamp(), printfLog);
 
 const ignoreFormatWrapper = (
   level: string,
@@ -65,68 +87,223 @@ const ignoreFormatWrapper = (
  *
  * @param filename
  * @param level
- * @param options add levels option to filter log
+ * @param options contains levels option to filter log, format for custom format
  *
  */
 const createFileTransport = function (
   filename: string,
   level?: string,
-  options?: { ignoreLevels?: string[]; levelsOnly?: boolean }
+  options?: {
+    ignoreLevels?: string[];
+    levelsOnly?: boolean;
+    format?: ReturnType<typeof combine>;
+  }
 ) {
   const ignoreFormat = ignoreFormatWrapper(level, options);
+  const format = options?.format ?? plainFormat;
   return new DailyRotateFile(
     Object.assign(
       {
-        filename: path.join(
-          'logs',
-          filename.replace(/\.log$/gi, '-%DATE%.log')
-        ),
+        filename: path.join('logs', filename.replace(/\.log$/gi, '-%DATE%')),
+        extension: path.extname(filename),
+        frequency: 'daily',
+        datePattern:
+          'YYYYMMDD' /** The option will infect the rotate frequency of log's file */,
         level,
         maxSize: 4 << 20 /* bytes */,
         maxFiles: logConf?.LOG_MAX_FILES || '14d',
       },
       options,
       ignoreFormat && {
-        format: combine(ignoreFormat, logFormat),
+        format: combine(ignoreFormat, format),
       }
     )
   );
 };
 
-const logger = winston.createLogger({
-  level: 'verbose',
-  format: logFormat,
-  defaultMeta: { pid: process.pid },
-  transports: [
-    //
-    // - Write all logs with level `error` and below to `error.log`
-    // - Write all logs with level `info` and below to `combined.log`
-    //
-    createFileTransport('error.log', 'warn'),
-    createFileTransport('info.log', 'info', {
-      ignoreLevels: ['error'],
-    }),
-    new winston.transports.Console({ level: 'info' }),
-    createFileTransport('access.log', 'http', { levelsOnly: true }),
-    createFileTransport('verbose.log', 'verbose', { levelsOnly: true }),
-  ],
-});
+/**
+ *
+ * sendTransform create a transform which send log message, logger master listen the message to log
+ * @param messageType
+ */
+const sendTransform = (messageType = DEFAULT_MESSAGE_TYPE) => (
+  info: winston.LogEntry
+): false => {
+  process.send({
+    type: messageType,
+    timestamp: timestampFormatter.format(new Date()),
+    payload: Object.assign(info, { pid: process.pid }),
+  });
+  return false;
+};
 
-//
-// If we're not in production then log to the console,
-// and filter default console log.
-//
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
-    new winston.transports.Console({
-      format: combine(
-        ignoreFormatWrapper(logger.level, {
-          ignoreLevels: ['error', 'warn', 'info'],
+/**
+ * logger is a winston.Logger instance wrapper, use createLogger create an instance before use it.
+ */
+let loggerInstance: {
+  logger: winston.Logger;
+  isMaster: boolean;
+  listeners?: number[];
+};
+
+/**
+ *
+ * The default log message type value the slaver work send to master
+ */
+const DEFAULT_MESSAGE_TYPE = 'log';
+
+/**
+ *
+ * addListener add listener to listen worker's message of log
+ * @param workers
+ */
+const addListener = (
+  messageType = DEFAULT_MESSAGE_TYPE,
+  ...workers: cluster.Worker[]
+): void => {
+  if (loggerInstance === undefined) {
+    createLogger(true, messageType, workers);
+  } else {
+    const listeners = (loggerInstance.listeners =
+      loggerInstance.listeners || []);
+    const logger = loggerInstance.logger;
+    const listener = ({
+      type,
+      payload,
+    }: {
+      type: string;
+      payload: winston.LogEntry;
+    }) => {
+      if (type === messageType) {
+        logger.log(Object.assign({ pid: process.pid }, payload));
+      }
+    };
+    for (const worker of workers) {
+      if (!listeners.includes(worker.id)) {
+        worker.on('message', listener);
+        worker.on('exit', () => {
+          const index = listeners.indexOf(worker.id);
+          listeners.splice(index, 1);
+        });
+        listeners.push(worker.id);
+      }
+    }
+  }
+};
+
+/**
+ *
+ * createLogger will initial variable loggerInstance,
+ * and return loggerInstance.logger
+ * repeatedly calling the method will reinitialize loggerInstance.
+ * The master logger can receive listened worker's info and log
+ * The slaver logger will send info to listener.
+ * The master logger must use addListener to listen slaver worker logger's info.
+ * @param loggerMaster
+ * @param messageType   The type value of the log message the slaver send to master
+ */
+const createLogger = (
+  loggerMaster = false,
+  messageType = DEFAULT_MESSAGE_TYPE,
+  workers?: cluster.Worker[]
+): winston.Logger => {
+  const format = loggerMaster
+    ? plainFormat
+    : winston.format(sendTransform(messageType))();
+  const level = 'info';
+  let logger: winston.Logger;
+  if (loggerMaster) {
+    // create master logger
+    logger = winston.createLogger({
+      level,
+      format,
+      transports: [
+        //
+        // - Write all logs with level `error` and below to `error.log`
+        // - Write all logs with level `info` and below to `combined.log`
+        //
+        createFileTransport('error.log', 'warn'),
+        createFileTransport('info.log', 'info', {
+          ignoreLevels: ['error'],
+          format: combine(errorsFormat, format),
         }),
-        logFormat
-      ),
-    })
-  );
-}
+        new winston.transports.Console({ level: 'info' }),
+      ],
+    });
+    loggerInstance = { logger, isMaster: loggerMaster, listeners: [] };
+    if (workers && workers.length > 0) {
+      addListener(messageType, ...workers);
+    }
+  } else {
+    // sub routine logger
+    logger = winston.createLogger({
+      level,
+      format: combine(errorsFormat, format),
+    });
+    loggerInstance = { logger, isMaster: loggerMaster };
+  }
 
-export default logger;
+  if (logConf?.ACCESS_LOG) {
+    logger.add(createFileTransport('access.log', 'http', { levelsOnly: true }));
+  }
+
+  //
+  // If we're not in production then log to the console,
+  // add console log upon level info.
+  //
+  if (process.env.NODE_ENV !== 'production') {
+    logger.add(
+      new winston.transports.Console({
+        format: combine(
+          ignoreFormatWrapper(logger.level, {
+            ignoreLevels: ['error', 'warn', 'info'],
+          }),
+          plainFormat
+        ),
+      })
+    );
+  }
+  return logger;
+};
+
+/**
+ * getLogger return the logger current process can use.
+ */
+const getLogger = (): winston.Logger => {
+  if (loggerInstance?.logger === undefined) {
+    const logger = createLogger(true);
+    logger.warn('Logger is not created exactly, default options will be used!');
+    return logger;
+  }
+  return loggerInstance.logger;
+};
+
+/**
+ *
+ * finishLogger call logger.end() and return a promise when logger finished.
+ */
+const finishLogger = async (): Promise<undefined> => {
+  const logger = loggerInstance?.logger;
+  if (logger !== undefined) {
+    const transportsFinished = logger.transports.map((t) => {
+      return new Promise((resolve) => {
+        t.on('finish', () => {
+          resolve();
+        });
+      });
+    });
+    const loggerFinished = Promise.all(transportsFinished).then(() => {
+      // set a timeout to wait writing file completed.
+      return new Promise<undefined>((resolve) => {
+        setTimeout(() => {
+          resolve();
+        }, 1000);
+      });
+    });
+    logger.end();
+    return loggerFinished;
+  }
+};
+
+export default getLogger;
+export { getLogger, createLogger, addListener, finishLogger };

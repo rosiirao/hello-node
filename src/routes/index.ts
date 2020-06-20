@@ -1,6 +1,7 @@
 import Koa from 'koa';
 import Router from '@koa/router';
 import { readyz, healthz, version } from '../controllers/kubeController';
+import { printHeaders } from '../controllers/requestInspector';
 import services from './services';
 
 const router = new Router({
@@ -8,15 +9,10 @@ const router = new Router({
 });
 
 router
-  .get('sysinfo', '/sysinfo', async (_, next) => {
-    return next();
-  })
-  .get('sysinfor', '/sysinfo/runtime', async (_, next) => {
-    return next();
-  })
   .get('/healthz', healthz)
   .get('/readyz', readyz)
-  .get('/version', version);
+  .get('/version', version)
+  .all('/printHeaders', printHeaders);
 
 export default function (app: Koa): Koa.Middleware {
   app
